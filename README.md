@@ -1,113 +1,19 @@
-# Mini Project REST API: Products & Orders
-
-REST API CRUD berbasis Express.js, MySQL, dan Prisma untuk Mini Project ETS mata kuliah Pemrograman Web Lanjut, Teknik Informatika, Universitas Mataram.
+# Tugas 9 - Autentikasi & Otorisasi
 
 ## Identitas
-
-| Keterangan | Isian |
-|---|---|
-| Nama | Sri Zul'aini Ulya |
-| NIM | F1D02410096 |
-| Kelas | B |
-| Mata Kuliah | Pemrograman Web Lanjut |
-| Kasus yang dipilih | Products API |
-
-## Deskripsi Kasus
-
-Proyek ini mengimplementasikan **Products API** untuk mengelola data produk beserta pesanannya. Tabel utama adalah `products`, dan tabel kedua adalah `orders` yang berelasi **satu-ke-banyak** (satu produk dapat memiliki banyak pesanan).
-
-Fitur utama:
-
-- CRUD lengkap untuk `products`, termasuk paginasi dan filter berdasarkan kategori.
-- Endpoint `GET /orders` yang menampilkan pesanan beserta data produk terkait (`include`).
-- Endpoint `POST /orders` yang membuat pesanan sekaligus mengurangi stok produk di dalam satu transaksi (`prisma.$transaction`), sehingga kedua langkah berhasil bersama atau gagal bersama.
-- Middleware `logger`, validasi dengan Joi, dan `errorHandler` terpusat dengan format jawaban error yang seragam.
-
-## Teknologi
-
-| Komponen | Keterangan |
-|---|---|
-| Runtime | Node.js |
-| Framework | Express.js 5 |
-| Basis data | MySQL |
-| ORM | Prisma 6 |
-| Validasi | Joi |
-| Konfigurasi | dotenv |
-| Pengembangan | nodemon |
-| Pengujian | Postman (daftar kasus uji juga tersedia di `requests.http`) |
-
-## Struktur Folder
-
-```
-pwl26-mini-project/
-├── prisma/
-│   ├── migrations/          # riwayat migrasi (di-commit)
-│   ├── schema.prisma        # definisi model Product dan Order
-│   └── seed.js              # seed data yang dapat diulang
-├── screenshot/              # bukti pengujian API dan basis data
-├── src/
-│   ├── routes/              # definisi URL dan pemasangan middleware
-│   ├── controllers/         # menerima request dan mengirim response
-│   ├── services/            # logika bisnis (termasuk $transaction)
-│   ├── data/                # akses basis data lewat Prisma
-│   ├── middleware/          # logger, validate, errorHandler
-│   ├── validators/          # skema Joi
-│   ├── utils/               # AppError
-│   ├── app.js               # perakitan aplikasi Express
-│   └── server.js            # titik masuk server
-├── .env.example             # contoh konfigurasi (tanpa kredensial asli)
-├── .gitignore
-├── package.json
-├── prisma.config.ts
-└── requests.http            # daftar kasus uji
-```
-
-Alur sebuah request:
-
-```
-route -> validasi -> controller -> service -> data -> database
-```
-
-Setiap lapis memiliki tanggung jawab tersendiri. Route menentukan URL dan middleware, controller mengatur request dan response, service memuat aturan bisnis, dan lapis data hanya berisi query Prisma.
-
-## Skema Basis Data
-
-### Tabel `products` (tabel utama)
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | INT, PK, auto increment | Identitas produk |
-| name | VARCHAR(150), **UNIQUE** | Nama produk (kolom teks unik) |
-| category | VARCHAR(100) | Kategori produk |
-| price | INT | Harga (kolom angka) |
-| stock | INT | Stok (kolom angka) |
-| isActive | BOOLEAN, default `true` | Status aktif |
-| createdAt | DATETIME, default `now()` | Waktu dibuat (kolom tanggal) |
-
-### Tabel `orders` (tabel kedua)
-
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | INT, PK, auto increment | Identitas pesanan |
-| productId | INT, FK ke `products.id` | Produk yang dipesan |
-| customerName | VARCHAR(150) | Nama pemesan |
-| quantity | INT | Jumlah pesanan |
-| totalPrice | INT | Harga satuan dikali jumlah |
-| orderDate | DATETIME, default `now()` | Waktu pesanan |
-
-### Relasi
-
-`products (1) ---- (N) orders`, yaitu satu produk memiliki banyak pesanan melalui kolom `orders.productId`.
+- Nama : Sri Zulaini Ulya
+- NIM  : F1D02410096
+- Kasus ETS : Products API (tabel `products` dan `orders`)
 
 ## Cara Menjalankan
 
-Prasyarat: Node.js dan MySQL (misalnya melalui Laragon atau XAMPP) sudah terpasang dan MySQL sedang berjalan.
+Prasyarat: Node.js terpasang dan MySQL sedang berjalan (misalnya lewat Laragon, klik **Start All**).
 
-1. Kloning repository dan masuk ke foldernya.
+1. Kloning repository, lalu masuk ke folder proyek.
 
    ```bash
-   git clone https://github.com/ISI_USERNAME_GITHUB/pwl26-mini-project.git
-   cd pwl26-mini-project
+   git clone https://github.com/szanuly/T9-AUTENTIKASI.git
+   cd T9-AUTENTIKASI
    ```
 
 2. Pasang dependensi.
@@ -116,286 +22,278 @@ Prasyarat: Node.js dan MySQL (misalnya melalui Laragon atau XAMPP) sudah terpasa
    npm install
    ```
 
-3. Salin `.env.example` menjadi `.env`, lalu sesuaikan nilainya.
+3. Salin `.env.example` menjadi `.env`, lalu isi nilainya.
 
    ```bash
-   copy .env.example .env      # Windows (cmd/PowerShell)
+   copy .env.example .env      # Windows
    # cp .env.example .env      # macOS/Linux
    ```
-
-   Isi `.env`:
 
    ```env
    DATABASE_URL="mysql://root:@localhost:3306/pwl26_mini_project"
    PORT=3000
+   JWT_SECRET="isi_dengan_string_acak_buatan_sendiri"
    ```
 
-   Jika MySQL memakai kata sandi, ubah menjadi `mysql://root:PASSWORD@localhost:3306/pwl26_mini_project`.
+   Secret JWT dibuat sendiri, misalnya dengan perintah berikut, lalu hasilnya ditempel ke `JWT_SECRET`. Nilai asli hanya berada di `.env` yang tidak di-commit.
 
-4. Jalankan migrasi (database dibuat otomatis jika belum ada).
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+
+4. Buat tabel lewat migrasi. Perintah ini membuat database bila belum ada, menerapkan migrasi ETS (`init`) dan migrasi baru `tambah_user`, lalu membuat Prisma Client.
 
    ```bash
    npx prisma migrate dev
    ```
 
-5. Isi data awal. Seed dapat dijalankan berulang kali karena mengosongkan tabel terlebih dahulu dan mereset auto increment.
+5. Isi data produk awal (seed dapat diulang).
 
    ```bash
    npx prisma db seed
    ```
 
-6. Jalankan server.
+6. Jalankan server di `http://localhost:3000`.
 
    ```bash
    npm run dev
    ```
 
-   Server berjalan di `http://localhost:3000`.
+Tabel `users` dibuat lewat model Prisma dan migrasi `tambah_user`, jadi tidak ada SQL manual. Strukturnya:
 
-## Daftar Endpoint
-
-### Products
-
-| Method | URL | Fungsi | Status sukses | Status gagal |
-|---|---|---|---|---|
-| GET | `/products?page=1&limit=10&category=...` | Daftar produk dengan paginasi dan filter kategori | 200 | 400 |
-| GET | `/products/:id` | Detail satu produk | 200 | 400, 404 |
-| POST | `/products` | Tambah produk | 201 | 400, 409, 422 |
-| PUT | `/products/:id` | Ubah produk | 200 | 400, 404, 409, 422 |
-| DELETE | `/products/:id` | Hapus produk | 204 | 400, 404, 409 |
-
-### Orders
-
-| Method | URL | Fungsi | Status sukses | Status gagal |
-|---|---|---|---|---|
-| GET | `/orders` | Daftar pesanan beserta data produk (`include`) | 200 | - |
-| POST | `/orders` | Buat pesanan dan kurangi stok dalam satu transaksi | 201 | 400, 404, 409, 422 |
-
-### Parameter Paginasi dan Filter
-
-| Parameter | Default | Keterangan |
+| Kolom | Tipe | Keterangan |
 |---|---|---|
-| `page` | 1 | Nomor halaman (minimal 1) |
-| `limit` | 10 | Jumlah data per halaman (1 sampai 100) |
-| `category` | - | Filter produk berdasarkan kategori |
+| id | INT, PK, auto increment | Identitas pengguna |
+| email | VARCHAR(100), UNIQUE | Email pengguna |
+| passwordHash | VARCHAR(255) | Hash bcrypt (cost 10), bukan password asli |
+| createdAt | DATETIME, default `now()` | Waktu akun dibuat |
 
-Contoh respons `GET /products`:
+## Akun Uji
 
-```json
-{
-  "success": true,
-  "data": [ { "id": 1, "name": "...", "category": "Aksesoris", "price": 150000, "stock": 50 } ],
-  "meta": { "page": 1, "limit": 3, "total": 2, "totalPages": 1 }
-}
-```
+Akun dibuat lewat `POST /auth/register` (tanpa seeder). Password di bawah adalah password sembarang untuk keperluan tugas.
 
-### Contoh Body
-
-`POST /products`
-
-```json
-{ "name": "Headset Sri Zulaini", "category": "Aksesoris", "price": 200000, "stock": 20 }
-```
-
-`POST /orders`
-
-```json
-{ "productId": 2, "customerName": "Sri Zulaini", "quantity": 2 }
-```
-
-## Middleware dan Penanganan Error
-
-| Middleware | Fungsi |
+| Email | Password |
 |---|---|
-| `logger` | Mencatat method, URL, dan status response setelah response selesai dikirim |
-| `validate` | Memvalidasi `body`, `params`, atau `query` memakai skema Joi. Body kosong dijawab 400, input yang salah dijawab 422 (body) atau 400 (params dan query) |
-| `errorHandler` | Menangani semua error di satu tempat dan dipasang paling akhir setelah semua route |
+| srizulainiulya@gmail.com | f1d02410096 |
 
-Format jawaban error seragam:
+## Struktur Proyek
+
+```
+T9-AUTENTIKASI/
+├── prisma/
+│   ├── migrations/
+│   │   ├── ..._init/                 (lama: tabel products dan orders)
+│   │   └── ..._tambah_user/          (BARU: tabel users)
+│   ├── schema.prisma                 (DIUBAH)
+│   └── seed.js
+├── screenshot/
+├── src/
+│   ├── routes/        auth.routes.js (BARU), product.routes.js (DIUBAH), order.routes.js (DIUBAH)
+│   ├── controllers/   auth.controller.js (BARU), product.controller.js, order.controller.js
+│   ├── services/      auth.service.js (BARU), product.service.js, order.service.js
+│   ├── data/          user.data.js (BARU), prisma.js, product.data.js, order.data.js
+│   ├── middleware/    auth.js (BARU), errorHandler.js (DIUBAH), validate.js (DIUBAH), logger.js
+│   ├── validators/    auth.validator.js (BARU), product.validator.js, order.validator.js
+│   ├── utils/         AppError.js
+│   ├── app.js         (DIUBAH)
+│   └── server.js
+├── .env.example       (DIUBAH)
+├── requests.http      (BARU)
+└── README.md
+```
+
+| File | Status | Tugas |
+|---|---|---|
+| `prisma/schema.prisma` | Diubah | Menambah model `User` yang dipetakan ke tabel `users`. |
+| `prisma/migrations/..._tambah_user/` | Baru | Menyimpan migrasi yang membuat tabel `users`. |
+| `src/routes/auth.routes.js` | Baru | Mendefinisikan `POST /auth/register`, `POST /auth/login`, dan `GET /auth/saya`. |
+| `src/controllers/auth.controller.js` | Baru | Menerima request autentikasi dan mengirim response. |
+| `src/services/auth.service.js` | Baru | Menjalankan logika register (hash bcrypt, deteksi email duplikat) dan login (bandingkan hash, buat token JWT). |
+| `src/data/user.data.js` | Baru | Menjalankan query tabel `users`; `select` mencegah `passwordHash` ikut dikembalikan. |
+| `src/validators/auth.validator.js` | Baru | Memuat skema Joi untuk register dan login. |
+| `src/middleware/auth.js` | Baru | Berisi `butuhLogin` yang memeriksa header Bearer dengan `jwt.verify` dan meneruskan error ke `errorHandler`. |
+| `src/middleware/errorHandler.js` | Diubah | Mengubah format jawaban error menjadi `{ error: { pesan, kode } }`. |
+| `src/middleware/validate.js` | Diubah | Menambah kode `VALIDATION_ERROR` dan memeriksa body kosong lewat Joi (jawaban 422). |
+| `src/routes/product.routes.js`, `order.routes.js` | Diubah | Memasang `butuhLogin` pada endpoint wajib login, sebelum validasi. |
+| `src/app.js` | Diubah | Mendaftarkan route `/auth`. |
+| `.env.example` | Diubah | Menambah contoh `JWT_SECRET` tanpa nilai asli. |
+| `requests.http` | Baru | Memuat kasus uji untuk REST Client dengan variabel `@token`. |
+
+Urutan middleware pada endpoint wajib login: `butuhLogin` -> validasi -> controller -> service -> data.
+
+## Endpoint
+
+| Method | URL | Akses | Status |
+|---|---|---|---|
+| POST | `/auth/register` | Publik | 201, 409 `EMAIL_DUPLIKAT`, 422 `VALIDATION_ERROR` |
+| POST | `/auth/login` | Publik | 200, 401 `LOGIN_GAGAL`, 422 `VALIDATION_ERROR` |
+| GET | `/auth/saya` | Wajib login | 200, 401 |
+| GET | `/products` (daftar, paginasi, filter) | Publik | 200 |
+| GET | `/products/:id` | Publik | 200, 404 |
+| POST | `/products` | Wajib login | 201, 401, 409, 422 |
+| PUT | `/products/:id` | Wajib login | 200, 401, 404, 409, 422 |
+| DELETE | `/products/:id` | Wajib login | 204, 401, 404 |
+| GET | `/orders` (tabel kedua dengan `include`) | Publik | 200 |
+| POST | `/orders` (transaksi dua tabel) | Wajib login | 201, 401, 404, 409, 422 |
+
+Kode error autentikasi:
+
+| Situasi | Status | Kode |
+|---|---|---|
+| Header `Authorization` tidak ada atau bukan Bearer | 401 | `TOKEN_DIPERLUKAN` |
+| Token rusak, signature salah, atau expired | 401 | `TOKEN_TIDAK_VALID` |
+| Email tidak terdaftar atau password salah | 401 | `LOGIN_GAGAL` ("Email atau password salah") |
+
+Format error yang seragam:
 
 ```json
-{ "success": false, "status": 409, "message": "Stok tidak cukup" }
+{ "error": { "pesan": "Email atau password salah", "kode": "LOGIN_GAGAL" } }
 ```
 
-Pemetaan error:
+Ringkasan aturan: password disimpan sebagai hash bcrypt (cost 10) di kolom `passwordHash` dan tidak pernah dikirim ke client; token JWT berisi `{ id }`, berlaku `2h`, dan ditandatangani dengan `JWT_SECRET` buatan sendiri; email divalidasi berformat valid maksimal 100 karakter, sedangkan password berupa string 8 sampai 72 karakter (bcrypt memotong input yang lebih panjang dari 72).
 
-| Sumber error | Status | Pesan |
-|---|---|---|
-| `AppError` buatan sendiri | sesuai nilai yang dilempar | sesuai pesan yang dilempar |
-| Prisma `P2002` (nilai unik duplikat) | 409 | Data sudah ada (nilai unik duplikat) |
-| Prisma `P2025` (record tidak ditemukan) | 404 | Data tidak ditemukan |
-| Prisma `P2003` (masih dipakai data lain) | 409 | Data masih dipakai oleh data lain |
-| JSON tidak valid | 400 | Format JSON tidak valid |
-| Route tidak terdaftar | 404 | Route tidak ditemukan |
-| Error lain | 500 | Terjadi kesalahan pada server |
+## Pengujian
 
-Untuk error 500, detail asli hanya dicetak di log server dan tidak dikirim ke klien, sehingga tidak membocorkan informasi internal.
+Pengujian dijalankan di Postman, dan kasus yang sama tersedia di `requests.http`. Setiap gambar memperlihatkan identitas saya pada email akun uji atau nama produk.
 
-## Transaksi pada `POST /orders`
+**Tabel `users`**
 
-Pembuatan pesanan terdiri dari dua langkah yang dibungkus `prisma.$transaction`:
+Kolom `passwordHash` berisi hash bcrypt berawalan `$2b$10$`, bukan password asli.
 
-1. Menyimpan baris baru di tabel `orders`.
-2. Mengurangi angka `stock` di tabel `products`.
+![Tabel users di phpMyAdmin](screenshot/01.png)
 
-Aturan bisnis diperiksa di lapis service **di dalam transaksi**: produk harus ada (jika tidak, 404) dan stok harus mencukupi (jika tidak, 409).
+**Register dan login**
 
-Alasan perancangan:
+`POST /auth/register` berhasil dengan status 201 dan respons hanya `{ id, email }`.
 
-- **Berhasil atau gagal bersama (atomik).** Jika pesanan tersimpan tetapi stok gagal dikurangi, data menjadi tidak konsisten, yaitu ada pesanan yang stoknya tidak pernah berkurang. Transaksi menjamin kedua langkah dibatalkan bersama bila salah satunya gagal.
-- **Memakai `tx`, bukan `prisma`.** Di dalam transaksi, seluruh query harus lewat objek `tx` agar berjalan pada koneksi dan transaksi yang sama. Query yang memakai `prisma` berjalan di luar transaksi sehingga tidak ikut dibatalkan (rollback). Karena itu fungsi di lapis data menerima parameter `db` yang diisi `tx`.
-- **Efek `throw` di dalam transaksi.** Setiap error yang dilempar di dalam callback transaksi memicu rollback otomatis, sehingga semua perubahan yang sudah dilakukan sebelumnya di transaksi itu dibatalkan.
+![Register 201](screenshot/07.png)
 
-Kerangka service:
+Register ulang dengan email yang sama dijawab 409 `EMAIL_DUPLIKAT`.
 
-```js
-prisma.$transaction(async (tx) => {
-  const product = await orderData.findProduct(tx, productId);
-  if (!product) throw new AppError(404, 'Produk tidak ditemukan');
-  if (product.stock < quantity) throw new AppError(409, 'Stok tidak cukup');
+![Register duplikat 409](screenshot/08.png)
 
-  const order = await orderData.createOrder(tx, { productId, customerName, quantity, totalPrice: product.price * quantity });
-  await orderData.decrementStock(tx, productId, quantity);
-  return order;
-});
-```
+Register dengan data yang tidak valid dijawab 422 `VALIDATION_ERROR`.
 
-Percobaan rollback: sebuah `throw new Error('uji rollback')` sengaja ditempatkan setelah `tx.order.create` dan sebelum pengurangan stok. Hasilnya, baris pesanan tidak tersimpan di basis data (lihat screenshot 24).
+![Register validasi 422](screenshot/09.png)
 
-## Hasil Pengujian
+`POST /auth/login` berhasil dengan status 200 dan respons berisi `token`.
 
-Seluruh pengujian dilakukan dengan Postman. Setiap gambar memperlihatkan request, kode status, respons, dan nama saya (Sri Zulaini) pada data yang diuji. Daftar kasus uji yang sama juga tersedia di berkas `requests.http`.
+![Login 200](screenshot/10.png)
 
-### 1. Products: Berhasil
+Login dengan password salah dijawab 401 `LOGIN_GAGAL`.
 
-**GET /products dengan paginasi dan filter** (`page=1&limit=3&category=Aksesoris`), status 200.
+![Login password salah 401](screenshot/11.png)
 
-![GET products 200](screenshot/01.png)
+Login dengan email tidak terdaftar dijawab 401 `LOGIN_GAGAL` dengan pesan yang sama persis.
 
-**GET /products/:id**, status 200.
+![Login email tidak terdaftar 401](screenshot/12.png)
 
-![GET product by id 200](screenshot/02.png)
+**Halaman publik dan wajib login**
 
-**POST /products**, status 201.
+Request 3 (halaman publik tanpa token, 200) dan request 4 (wajib login tanpa token, 401) ditampilkan berdampingan.
 
-![POST product 201](screenshot/05.png)
+![Publik](screenshot/02.png)
 
-**PUT /products/:id**, status 200.
+![wajib login](screenshot/02a.png)
 
-![PUT product 200](screenshot/09.png)
+Request 5, yaitu `POST /products` dengan header `Authorization: Bearer ...`, berhasil dengan status 201.
 
-**DELETE /products/:id**, status 204.
+![POST products dengan token 201](screenshot/03.png)
 
-![DELETE product 204](screenshot/12.png)
+`GET /auth/saya` tanpa token dijawab 401 `TOKEN_DIPERLUKAN`.
 
-### 2. Products: Gagal
+![Auth saya tanpa token 401](screenshot/13.png)
 
-**GET /products/9999** (produk tidak ada), status 404.
+`GET /auth/saya` dengan token dijawab 200 dan memuat `id`.
 
-![GET product 404](screenshot/03.png)
+![Auth saya dengan token 200](screenshot/14.png)
 
-**GET /products/abc** (ID bukan angka), status 400.
+`PUT` atau `DELETE` produk tanpa token dijawab 401.
 
-![GET product id invalid 400](screenshot/04.png)
+![PUT DELETE tanpa token 401](screenshot/15.png)
 
-**POST /products dengan nama duplikat**, status 409.
+`GET /orders` (endpoint tabel kedua dengan `include`) tetap publik dan dijawab 200 tanpa token.
 
-![POST product duplicate 409](screenshot/06.png)
+![GET orders publik 200](screenshot/16.png)
 
-**POST /products dengan data tidak valid** (nama terlalu pendek dan harga negatif), status 422.
+`POST /orders` (endpoint transaksi) tanpa token dijawab 401.
 
-![POST product validasi 422](screenshot/07.png)
+![POST orders tanpa token 401](screenshot/17.png)
 
-**POST /products dengan body kosong**, status 400.
+`POST /orders` dengan token berhasil dengan status 201.
 
-![POST product body kosong 400](screenshot/08.png)
+![POST orders dengan token 201](screenshot/18.png)
 
-**PUT /products/9999** (produk tidak ada), status 404.
+**requests.http**
 
-![PUT product 404](screenshot/10.png)
+Berkas `requests.http` di VS Code memperlihatkan variabel `@token` dan seluruh kasus uji, termasuk dua percobaan.
 
-**PUT /products/:id dengan nama milik produk lain**, status 409.
+![requests.http di VS Code](screenshot/06.png)
 
-![PUT product duplicate 409](screenshot/11.png)
+## Dua Percobaan
 
-**DELETE /products/9999** (produk tidak ada), status 404.
+### Percobaan 1: Token Dipalsukan
 
-![DELETE product 404](screenshot/13.png)
+**Hasil.** Setelah login, payload token saya ubah (misalnya `id` menjadi angka lain) tanpa mengetahui `JWT_SECRET`, lalu token itu dikirim ke endpoint wajib login. Jawabannya 401 `TOKEN_TIDAK_VALID`.
 
-### 3. Orders dan Transaksi
+Payload token terbaca tanpa secret apa pun:
 
-**POST /orders berhasil** (pesanan dibuat dan stok berkurang), status 201.
+![Payload token dibaca](screenshot/04a.png)
 
-![POST order 201](screenshot/14.png)
+![Payload token diubah](screenshot/04b.png)
 
-**POST /orders dengan stok tidak cukup**, status 409.
+Token hasil ubahan ditolak:
 
-![POST order stok 409](screenshot/15.png)
+![Percobaan 1: token dipalsukan](screenshot/04.png)
 
-**POST /orders dengan produk yang tidak ada**, status 404.
+**Penjelasan.** Payload JWT hanya di-encode dengan Base64, bukan dienkripsi, sehingga siapa pun dapat membaca dan mengubahnya. Namun signature dihitung dari header dan payload memakai `JWT_SECRET`, jadi setelah payload berubah signature lama tidak lagi cocok. `jwt.verify` di server menemukan ketidakcocokan itu dan menolak token.
 
-![POST order produk 404](screenshot/16.png)
+### Percobaan 2: Token Expired
 
-**POST /orders dengan quantity 0**, status 422.
+**Hasil.** `expiresIn` di `auth.service.js` saya ubah sementara menjadi `'5s'`, lalu login, menunggu 6 detik, dan mengirim request ke endpoint wajib login. Jawabannya 401 `TOKEN_TIDAK_VALID`. Nilai sudah dikembalikan ke `'2h'` sebelum commit.
 
-![POST order validasi 422](screenshot/17.png)
+Pengaturan sementara `expiresIn: '5s'`:
 
-**GET /orders beserta data produk (`include`)**, status 200.
+![expiresIn 5s](screenshot/05a.png)
 
-![GET orders include 200](screenshot/18.png)
+Token yang sudah lewat 6 detik ditolak:
 
-### 4. Bukti Basis Data (phpMyAdmin)
+![Percobaan 2: token expired](screenshot/05.png)
 
-**Kondisi awal**: stok produk sebelum pesanan dibuat dan tabel `orders` masih kosong.
-
-![DB sebelum order](screenshot/19.png)
-
-**Setelah pesanan berhasil**: baris baru muncul di `orders` dan stok produk berkurang sesuai jumlah pesanan.
-
-![DB sesudah order berhasil](screenshot/20.png)
-
-**Setelah pesanan gagal (409)**: tabel `products` dan `orders` tidak berubah.
-
-![DB sesudah order gagal](screenshot/21.png)
-
-### 5. Bukti Tambahan
-
-**Migrasi dan seed** berhasil dijalankan.
-
-![Migrate dan seed](screenshot/22.png)
-
-**Struktur tabel** `products` dan `orders` di phpMyAdmin.
-
-![Struktur tabel](screenshot/23.png)
+**Penjelasan.** Saat token dibuat, waktu kedaluwarsanya disimpan sebagai klaim `exp` di dalam payload yang ikut ditandatangani. Setiap kali `jwt.verify` dijalankan, server membandingkan `exp` dengan waktu saat itu dan menolak token yang sudah lewat. Karena informasinya berada di dalam token itu sendiri, server tidak perlu menyimpan catatan apa pun.
 
 ## Deklarasi Penggunaan AI
 
-> Catatan untuk diri sendiri: bagian ini dinilai dari kejujuran dan kelengkapan. Sesuaikan isinya dengan hal yang benar-benar saya lakukan, lalu hapus catatan ini.
+| Bagian | Alat AI | Dipakai untuk apa | Cara saya memeriksa hasilnya |
+|--------|---------|-------------------|------------------------------|
+| Dua percobaan | Claude | Penjelasan konsep payload JWT dan klaim `exp` | Mencoba sendiri token yang diubah dan token expired, lalu menjelaskannya dengan kata-kata sendiri |
+| Debugging | Claude | Membantu menelusuri kesalahan, yaitu `@prisma/client did not initialize`, `P1001` karena MySQL belum menyala, database yang belum muncul di phpMyAdmin, route `/auth` yang dijawab 404, dan `ECONNREFUSED` | Membaca pesan error di terminal dan mencoba perbaikan satu per satu sampai hasilnya sesuai |
+| Dokumentasi | Claude | Kerangka dan teks README ini serta daftar screenshot | Membaca ulang seluruh isi dan menyesuaikannya dengan hasil pengerjaan saya |
 
-Saya menggunakan AI (Claude, Anthropic) sebagai alat bantu belajar dalam pengerjaan proyek ini.
+**Contoh prompt:**
 
-**Bagian yang dibantu AI dan untuk apa:**
+- "list apa saja yang harus di ss untuk dimasukkan ke file screenshot"
 
-| Bagian | Bentuk bantuan |
+**Pernyataan:** Saya menggunakan AI pada bagian yang tertulis di tabel. Bagian lain saya kerjakan sendiri, yaitu pembuatan tabel users, contoh errorHandler, register dan login, pengujian di Postman, pengambilan screenshot, penyesuaian kode saat terjadi error, serta penjelasan dan kesimpulan di README ini.
+
+## Kesimpulan & Kendala
+
+**1. Mengapa password di-hash, bukan dienkripsi?**
+
+Hash itu cuma jalan satu arah. Jadi password asli tidak bisa dihitung balik dari hash. Kalau database bocor, penyerang cuma dapat hash-nya saja. Enkripsi bisa dua arah. Artinya, siapa pun yang pegang kunci bisa membuka semua password sekaligus. Waktu login, server tinggal mencocokkan password yang diketik dengan hash yang tersimpan pakai `bcrypt.compare`. Bcrypt juga memakai salt dan cost 10, jadi lambat kalau dicoba berulang kali.
+
+**2. Mengapa pesan login gagal dibuat sama untuk email tidak terdaftar dan password salah?**
+
+Kalau pesannya beda, penyerang bisa menebak email mana yang terdaftar. Caranya dengan mencoba banyak email lalu melihat pesan yang muncul. Dengan satu pesan yang sama ("Email atau password salah"), kedua kasus itu tidak bisa dibedakan.
+
+**3. Apa bedanya halaman publik dan halaman wajib login pada proyek ini, dan dari mana server tahu token sah tanpa menyimpannya?**
+
+Halaman publik adalah endpoint yang cuma membaca atau membuka akses: register, login, daftar dan detail produk, serta daftar pesanan. Halaman wajib login adalah endpoint yang mengubah data atau memerlukan identitas: tambah, ubah, dan hapus produk, endpoint transaksi `POST /orders`, serta `GET /auth/saya`. Server tahu token sah lewat `jwt.verify`. Caranya dengan menghitung ulang signature pakai `JWT_SECRET` miliknya, lalu mencocokkannya dan memeriksa waktu `exp`. Semua informasi itu ada di dalam token, jadi server tidak menyimpan daftar token.
+
+**Kendala dan solusi:**
+
+| Kendala | Solusi |
 |---|---|
-| Perencanaan | Menjelaskan arti soal, memilih rancangan kasus (Products dan Orders), dan menyusun urutan langkah pengerjaan |
-| Debugging | Membantu menelusuri kesalahan, yaitu perbedaan perintah `mkdir` di PowerShell, error seed karena berkas belum dibuat, error 500 pada paginasi akibat nilai default `req.query` di Express 5, dan ID produk yang tidak dimulai dari 1 |
-| Dokumentasi | Kerangka dan teks README ini |
-
-**Cara saya memeriksa hasilnya:**
-
-- Menjalankan setiap endpoint di Postman dan mencocokkan kode status (200, 201, 204, 400, 404, 409, 422) dengan yang diharapkan.
-- Mengecek isi tabel `products` dan `orders` di phpMyAdmin sebelum dan sesudah pesanan, termasuk kasus gagal.
-- Membaca ulang setiap berkas kode dan memastikan saya memahami alurnya.
-- Melakukan percobaan `throw new Error` di tengah transaksi untuk membuktikan rollback.
-- Menulis ulang fungsi transaksi (`POST /orders`) tanpa melihat contoh, seperti yang saya tunjukkan pada video.
-
-**Bagian yang saya kerjakan sendiri:** pemilihan kasus dan nama kolom, pengisian data uji dan identitas pada data, pengujian dan pengambilan screenshot, penyesuaian kode ketika terjadi error, serta penjelasan dan kesimpulan pada video.
-
-## Link Video Presentasi
-
-https://drive.google.com/drive/folders/1mX_w9Qc0yvXB3iIGxeZcgQCU5vTX8YPn?usp=sharing
-
-## Link Repository
-
-https://github.com/szanUly/pwl26-mini-project.git
+| Server tidak mau jalan dengan pesan `@prisma/client did not initialize yet` setelah proyek ETS disalin ke folder baru | Menjalankan `npx prisma generate` karena Prisma Client belum dibuat di folder baru |
+| Migrasi gagal dengan `P1001: Can't reach database server` | Menyalakan MySQL lewat Laragon (**Start All**), lalu menjalankan ulang migrasi |
+| Database tidak muncul di phpMyAdmin | Menjalankan ulang `npx prisma migrate dev` dan `npx prisma db seed` agar database dan tabel dibuat lagi dari folder migrasi |

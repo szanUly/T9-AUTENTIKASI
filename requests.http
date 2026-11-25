@@ -1,4 +1,5 @@
-@base = http://localhost:3000
+@baseUrl = http://localhost:3000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzk1NjI5NDM1LCJleHAiOjE3OTU2MzY2MzV9.xkPhc6kOQ8bml_FJn_wC_5U1Q8bvo6WlvQS43p2shxo
 # Identitas: Sri Zulaini Ulya - F1D02410096
 
 ### 200 - daftar produk (paginasi + filter) | Sri Zulaini Ulya - F1D02410096
